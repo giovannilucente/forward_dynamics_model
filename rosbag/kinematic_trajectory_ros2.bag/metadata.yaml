@@ -2,29 +2,29 @@ rosbag2_bagfile_information:
   version: 5
   storage_identifier: sqlite3
   duration:
-    nanoseconds: 2900000000
+    nanoseconds: 299900000000
   starting_time:
     nanoseconds_since_epoch: 0
-  message_count: 90
+  message_count: 9000
   topics_with_message_count:
     - topic_metadata:
         name: /vehicle/steering
         type: std_msgs/Float64
         serialization_format: cdr
         offered_qos_profiles: ""
-      message_count: 30
+      message_count: 3000
     - topic_metadata:
         name: /vehicle/throttle
         type: std_msgs/Float64
         serialization_format: cdr
         offered_qos_profiles: ""
-      message_count: 30
+      message_count: 3000
     - topic_metadata:
         name: /vehicle/odometry
         type: nav_msgs/Odometry
         serialization_format: cdr
         offered_qos_profiles: ""
-      message_count: 30
+      message_count: 3000
   compression_format: ""
   compression_mode: ""
   relative_file_paths:
@@ -34,5 +34,5 @@ rosbag2_bagfile_information:
       starting_time:
         nanoseconds_since_epoch: 0
       duration:
-        nanoseconds: 2900000000
-      message_count: 90
+        nanoseconds: 299900000000
+      message_count: 9000

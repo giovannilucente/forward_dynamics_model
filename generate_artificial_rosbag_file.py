@@ -2,6 +2,7 @@ import os
 import shutil
 import math
 import random
+import numpy as np
 import rclpy
 import rosbag2_py
 from std_msgs.msg import Header, Float64
@@ -37,42 +38,63 @@ def generate_trajectory_and_control(num_points=5, dt=0.1):
     and add small noise to simulate real-world imperfections.
     """
 
-    # Parameters
-    L = 2.5  # Wheelbase (meters)
-    Lr = L / 2.0  # Distance from rear axle to center of mass
-    max_steer = math.radians(30)  # Maximum steering angle (30 degrees)
+    # Vehicle parameters
+    mass = 1500.0  # kg
+    L = 2.5  # Wheelbase [m]
+    Lr = L / 2.0  # Rear axle to COG [m]
+    drag_coeff = 0.3  # aerodynamic drag coefficient
+    frontal_area = 2.2  # m^2
+    air_density = 1.225  # kg/m^3
+    rolling_resistance_coeff = 0.015
+    max_engine_force = 4000.0  # N
+    g = 9.81  # gravity
 
-    # Noise parameters
-    pos_noise_std = 0.01  # meters
-    yaw_noise_std = math.radians(0.01)  # radians
-    vel_noise_std = 0.02  # m/s
-    angular_vel_noise_std = math.radians(0.2)  # rad/s
-    throttle_noise_std = 0.1  # m/s²
-    steering_noise_std = math.radians(0.5)  # rad
+    max_steer = 0.4  # ~23 degrees
 
-    # Initial state
+    # Initialize states
     x = 0.0
     y = 0.0
     yaw = 0.0
-    v = 0.0  # Longitudinal speed
+    v = 0.0
+    slip_angle = 0.0
 
     odometries = []
     throttles = []
     steering_angles = []
 
+    # Noise parameters
+    pos_noise_std = 0.01  
+    yaw_noise_std = math.radians(0.01) 
+    vel_noise_std = 0.02  
+    angular_vel_noise_std = math.radians(0.05)  
+    throttle_noise_std = 0.05  
+    steering_noise_std = math.radians(0.05)  
+
     for i in range(num_points):
-        # Control inputs
-        throttle_val = 1.0  # m/s² constant acceleration
-        steering_val = max_steer * math.sin(0.2 * i)  # sinusoidal steering
+        # -------- Generate control inputs --------
+        # Random throttle inputs with slow variations
+        throttle_val = np.clip(0.5 + 0.5 * np.random.randn() * 0.1, 0.0, 1.0)
+        steering_val = np.clip(0.2 * math.sin(0.01 * i) + 0.1 * np.random.randn(), -max_steer, max_steer)
 
-        # Slip angle beta
-        beta = math.atan2(Lr * math.tan(steering_val), L)
+        # -------- Vehicle longitudinal dynamics --------
+        engine_force = throttle_val * max_engine_force
+        drag_force = 0.5 * air_density * drag_coeff * frontal_area * v**2
+        rolling_force = rolling_resistance_coeff * mass * g
 
-        # Vehicle dynamics
-        v += throttle_val * dt
+        total_force = engine_force - drag_force - rolling_force
+        acceleration = total_force / mass
+
+        v += acceleration * dt
+        v = max(v, 0.0)  # No negative speeds
+
+        # -------- Vehicle lateral/slip dynamics --------
+        beta = math.atan2(Lr * math.tan(steering_val), L)  # assuming 2.5 m wheelbase
+
+        # -------- Update position --------
         x += v * math.cos(yaw + beta) * dt
         y += v * math.sin(yaw + beta) * dt
-        yaw += (v / L) * math.tan(steering_val) * dt
+        yaw += (v / 2.5) * math.tan(steering_val) * dt  # Bicycle model
+        yaw = (yaw + math.pi) % (2 * math.pi) - math.pi  # normalize between [-pi, pi]
 
         # Add noise to the state
         noisy_x = x + random.gauss(0, pos_noise_std)
@@ -125,7 +147,6 @@ def generate_trajectory_and_control(num_points=5, dt=0.1):
 
 
 def create_bag_file():
-    # Directory
     bag_dir = 'rosbag/kinematic_trajectory_ros2.bag'
 
     if os.path.exists(bag_dir):
@@ -175,7 +196,7 @@ def create_bag_file():
     writer.create_topic(topic_metadata_steering)
 
     # Generate odometries, throttles, and steering angles
-    odometries, throttles, steering_angles = generate_trajectory_and_control(30)
+    odometries, throttles, steering_angles = generate_trajectory_and_control(3000)
 
     rclpy.init()
 
