@@ -161,8 +161,8 @@ def read_rosbag_and_write_csv(bag_path, output_csv):
 
     # Compute statistics
     print("\n=== Trajectory Statistics ===")
-    print(f"Speed (m/s): min={velocities.min():.2f}, max={velocities.max():.2f}, mean={velocities.mean():.2f}")
-    print(f"Yaw Rate (rad/s): min={yaw_rates.min():.4f}, max={yaw_rates.max():.4f}, mean={yaw_rates.mean():.4f}")
+    print(f"Speed (m/s): min={velocities.min():.2f}, max={velocities.max():.2f}, mean={velocities.mean():.2f}, std={velocities.std():.2f}")
+    print(f"Yaw Rate (rad/s): min={yaw_rates.min():.4f}, max={yaw_rates.max():.4f}, mean={yaw_rates.mean():.4f}, std={yaw_rates.std():.4f}")
     print("================================\n")
 
 # Initialize rclpy
