@@ -1,5 +1,7 @@
 import os
 import shutil
+import math
+import random
 import rclpy
 import rosbag2_py
 from std_msgs.msg import Header, Float64
@@ -28,46 +30,96 @@ def euler_to_quaternion(roll, pitch, yaw):
     qz = cr * cp * sy - sr * sp * cy
 
     return qx, qy, qz, qw
-    
-def generate_trajectory_and_control(num_points=5):
+
+def generate_trajectory_and_control(num_points=5, dt=0.1):
+    """
+    Simulate a dynamic bicycle model with slip angle (beta) 
+    and add small noise to simulate real-world imperfections.
+    """
+
+    # Parameters
+    L = 2.5  # Wheelbase (meters)
+    Lr = L / 2.0  # Distance from rear axle to center of mass
+    max_steer = math.radians(30)  # Maximum steering angle (30 degrees)
+
+    # Noise parameters
+    pos_noise_std = 0.01  # meters
+    yaw_noise_std = math.radians(0.01)  # radians
+    vel_noise_std = 0.02  # m/s
+    angular_vel_noise_std = math.radians(0.2)  # rad/s
+    throttle_noise_std = 0.1  # m/s²
+    steering_noise_std = math.radians(0.5)  # rad
+
+    # Initial state
+    x = 0.0
+    y = 0.0
+    yaw = 0.0
+    v = 0.0  # Longitudinal speed
+
     odometries = []
     throttles = []
     steering_angles = []
 
     for i in range(num_points):
-        # Create the Odometry message
+        # Control inputs
+        throttle_val = 1.0  # m/s² constant acceleration
+        steering_val = max_steer * math.sin(0.2 * i)  # sinusoidal steering
+
+        # Slip angle beta
+        beta = math.atan2(Lr * math.tan(steering_val), L)
+
+        # Vehicle dynamics
+        v += throttle_val * dt
+        x += v * math.cos(yaw + beta) * dt
+        y += v * math.sin(yaw + beta) * dt
+        yaw += (v / L) * math.tan(steering_val) * dt
+
+        # Add noise to the state
+        noisy_x = x + random.gauss(0, pos_noise_std)
+        noisy_y = y + random.gauss(0, pos_noise_std)
+        noisy_yaw = yaw + random.gauss(0, yaw_noise_std)
+        noisy_vx = v * math.cos(beta) + random.gauss(0, vel_noise_std)
+        noisy_vy = v * math.sin(beta) + random.gauss(0, vel_noise_std)
+        noisy_angular_z = (v / L) * math.tan(steering_val) + random.gauss(0, angular_vel_noise_std)
+
+        # Create Odometry message
         odom = Odometry()
         odom.header = Header()
-        odom.header.stamp.sec = i
-        odom.header.stamp.nanosec = 0
+        odom.header.stamp.sec = int(i * dt)
+        odom.header.stamp.nanosec = int((i * dt - int(i * dt)) * 1e9)
         odom.header.frame_id = 'map'
         odom.child_frame_id = 'base_link'
 
         # Fill pose
+        qx, qy, qz, qw = euler_to_quaternion(0.0, 0.0, noisy_yaw)
+
         odom.pose.pose = Pose()
-        odom.pose.pose.position.x = 1.0 + i
-        odom.pose.pose.position.y = 2.0 + i
+        odom.pose.pose.position.x = noisy_x
+        odom.pose.pose.position.y = noisy_y
         odom.pose.pose.position.z = 0.0
-        odom.pose.pose.orientation.w = 1.0  # Neutral rotation
+        odom.pose.pose.orientation.x = qx
+        odom.pose.pose.orientation.y = qy
+        odom.pose.pose.orientation.z = qz
+        odom.pose.pose.orientation.w = qw
 
         # Fill twist (velocity)
         odom.twist.twist = Twist()
-        odom.twist.twist.linear.x = 1.0 + 0.2 * i
-        odom.twist.twist.linear.y = 0.0
+        odom.twist.twist.linear.x = noisy_vx
+        odom.twist.twist.linear.y = noisy_vy
         odom.twist.twist.linear.z = 0.0
-        odom.twist.twist.angular.z = 0.1 * i
+        odom.twist.twist.angular.z = noisy_angular_z
 
         odometries.append(odom)
 
-        # Control input (Throttle and Steering)
-        throttle = Float64()
-        throttle.data = 1.0 + 0.2 * i  # Example throttle input
+        # Control input messages with noise
+        throttle_msg = Float64()
+        throttle_msg.data = throttle_val + random.gauss(0, throttle_noise_std)
 
-        steering = Float64()
-        steering.data = 0.1 * i  # Example steering input
+        steering_msg = Float64()
+        steering_msg.data = steering_val + random.gauss(0, steering_noise_std)
 
-        throttles.append(throttle)
-        steering_angles.append(steering)
+        throttles.append(throttle_msg)
+        steering_angles.append(steering_msg)
 
     return odometries, throttles, steering_angles
 
