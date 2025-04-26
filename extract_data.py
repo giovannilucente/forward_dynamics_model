@@ -2,6 +2,7 @@ import os
 import csv
 import rclpy
 import math
+import numpy as np 
 import rosbag2_py
 import matplotlib.pyplot as plt  # <<<<<<<<<<<<<<<<
 from rosidl_runtime_py.utilities import get_message
@@ -16,6 +17,7 @@ output_csv = 'trajectory_csv/trajectory_data.csv'
 # Topics
 odometry_topic = '/vehicle/odometry'
 throttle_topic = '/vehicle/throttle'
+brake_topic = '/vehicle/braking'
 steering_topic = '/vehicle/steering'
 
 # Message types
@@ -102,6 +104,9 @@ def read_rosbag_and_write_csv(bag_path, output_csv):
 
         elif topic == steering_topic:
             data[time_sec]['steering'] = msg.data
+        
+        elif topic == brake_topic:
+            data[time_sec]['braking'] = msg.data
 
     # Sort timestamps
     sorted_times = sorted(data.keys())
@@ -109,7 +114,7 @@ def read_rosbag_and_write_csv(bag_path, output_csv):
     # Write to CSV
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
     with open(output_csv, mode='w', newline='') as csv_file:
-        fieldnames = ['timestamp', 'pos_x', 'pos_y', 'pos_z', 'yaw', 'vel_x', 'vel_y', 'yaw_rate', 'throttle', 'steering']
+        fieldnames = ['timestamp', 'pos_x', 'pos_y', 'pos_z', 'yaw', 'vel_x', 'vel_y', 'yaw_rate', 'throttle', 'braking', 'steering']
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
 
         writer.writeheader()
@@ -135,6 +140,30 @@ def read_rosbag_and_write_csv(bag_path, output_csv):
     plt.grid(True)
     plt.show()
     # ----------------------
+
+    # --- Compute statistics ---
+
+    # Extract data into numpy arrays
+    velocities = []
+    yaw_rates = []
+
+    for time in sorted_times:
+        entry = data[time]
+        if 'vel_x' in entry and 'vel_y' in entry:
+            speed = math.sqrt(entry['vel_x']**2 + entry['vel_y']**2)
+            velocities.append(speed)
+
+        if 'yaw_rate' in entry:
+            yaw_rates.append(entry['yaw_rate'])
+
+    velocities = np.array(velocities)
+    yaw_rates = np.array(yaw_rates)
+
+    # Compute statistics
+    print("\n=== Trajectory Statistics ===")
+    print(f"Speed (m/s): min={velocities.min():.2f}, max={velocities.max():.2f}, mean={velocities.mean():.2f}")
+    print(f"Yaw Rate (rad/s): min={yaw_rates.min():.4f}, max={yaw_rates.max():.4f}, mean={yaw_rates.mean():.4f}")
+    print("================================\n")
 
 # Initialize rclpy
 rclpy.init()
