@@ -40,12 +40,14 @@ def generate_trajectory_and_control(num_points=500, dt=0.1):
     g = 9.81
     v_max = 16.66  # 60 km/h ~ 16.66 m/s
     max_steer = 0.4  # ~23 degrees
+    tau = 0.5 
 
     # Initialize states
     x = 0.0
     y = 0.0
     yaw = 0.0
     v = 0.0
+    yaw_rate = 0.0
 
     odometries = []
     throttles = []
@@ -88,11 +90,13 @@ def generate_trajectory_and_control(num_points=500, dt=0.1):
 
         # -------- Vehicle lateral/slip dynamics --------
         beta = math.atan2(Lr * math.tan(steering_val), L)
+        desired_yaw_rate = (v / L) * math.tan(steering_val)
+        yaw_rate += (desired_yaw_rate - yaw_rate) * dt / tau
 
         # -------- Update position --------
         x += v * math.cos(yaw + beta) * dt
         y += v * math.sin(yaw + beta) * dt
-        yaw += (v / L) * math.tan(steering_val) * dt
+        yaw += yaw_rate * dt
         yaw = (yaw + np.pi) % (2 * np.pi) - np.pi  # Normalize yaw to [-pi, pi]
 
         # Add noise
@@ -101,7 +105,7 @@ def generate_trajectory_and_control(num_points=500, dt=0.1):
         noisy_yaw = yaw + random.gauss(0, yaw_noise_std)
         noisy_vx = v * math.cos(beta) + random.gauss(0, vel_noise_std)
         noisy_vy = v * math.sin(beta) + random.gauss(0, vel_noise_std)
-        noisy_angular_z = (v / L) * math.tan(steering_val) + random.gauss(0, angular_vel_noise_std)
+        noisy_angular_z = yaw_rate + random.gauss(0, angular_vel_noise_std)
 
         # Create Odometry
         odom = Odometry()
