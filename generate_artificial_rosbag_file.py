@@ -8,6 +8,27 @@ from nav_msgs.msg import Odometry
 import rclpy.serialization
 from rclpy.node import Node
 
+def euler_to_quaternion(roll, pitch, yaw):
+    """
+    Convert Euler angles (roll, pitch, yaw) in radians to quaternion (qx, qy, qz, qw).
+
+    Returns:
+        qx, qy, qz, qw
+    """
+    cy = math.cos(yaw * 0.5)
+    sy = math.sin(yaw * 0.5)
+    cp = math.cos(pitch * 0.5)
+    sp = math.sin(pitch * 0.5)
+    cr = math.cos(roll * 0.5)
+    sr = math.sin(roll * 0.5)
+
+    qw = cr * cp * cy + sr * sp * sy
+    qx = sr * cp * cy - cr * sp * sy
+    qy = cr * sp * cy + sr * cp * sy
+    qz = cr * cp * sy - sr * sp * cy
+
+    return qx, qy, qz, qw
+    
 def generate_trajectory_and_control(num_points=5):
     odometries = []
     throttles = []

@@ -1,6 +1,7 @@
 import os
 import csv
 import rclpy
+import math
 import rosbag2_py
 from rosidl_runtime_py.utilities import get_message
 import rclpy.serialization
@@ -9,7 +10,7 @@ import rclpy.serialization
 bag_path = 'rosbag/kinematic_trajectory_ros2.bag'
 
 # Output CSV file
-output_csv = 'rosbag/trajectory_data.csv'
+output_csv = 'trajectory_csv/trajectory_data.csv'
 
 # Topics
 odometry_topic = '/vehicle/odometry'
@@ -19,6 +20,32 @@ steering_topic = '/vehicle/steering'
 # Message types
 Odometry = get_message('nav_msgs/msg/Odometry')
 Float64 = get_message('std_msgs/msg/Float64')
+
+def quaternion_to_euler(qx, qy, qz, qw):
+    """
+    Convert quaternion (qx, qy, qz, qw) to Euler angles (roll, pitch, yaw) in radians.
+
+    Returns:
+        roll, pitch, yaw
+    """
+    # Roll (x-axis rotation)
+    sinr_cosp = 2.0 * (qw * qx + qy * qz)
+    cosr_cosp = 1.0 - 2.0 * (qx * qx + qy * qy)
+    roll = math.atan2(sinr_cosp, cosr_cosp)
+
+    # Pitch (y-axis rotation)
+    sinp = 2.0 * (qw * qy - qz * qx)
+    if abs(sinp) >= 1:
+        pitch = math.copysign(math.pi / 2, sinp)  # Clamp
+    else:
+        pitch = math.asin(sinp)
+
+    # Yaw (z-axis rotation)
+    siny_cosp = 2.0 * (qw * qz + qx * qy)
+    cosy_cosp = 1.0 - 2.0 * (qy * qy + qz * qz)
+    yaw = math.atan2(siny_cosp, cosy_cosp)
+
+    return roll, pitch, yaw
 
 def read_rosbag_and_write_csv(bag_path, output_csv):
     storage_options = rosbag2_py.StorageOptions(uri=bag_path, storage_id='sqlite3')
@@ -53,13 +80,19 @@ def read_rosbag_and_write_csv(bag_path, output_csv):
             data[time_sec] = {}
 
         if topic == odometry_topic:
-            data[time_sec]['pos_x'] = msg.pose.pose.position.x
-            data[time_sec]['pos_y'] = msg.pose.pose.position.y
-            data[time_sec]['pos_z'] = msg.pose.pose.position.z
-            data[time_sec]['orient_w'] = msg.pose.pose.orientation.w
-            data[time_sec]['vel_x'] = msg.twist.twist.linear.x
-            data[time_sec]['vel_y'] = msg.twist.twist.linear.y
-            data[time_sec]['ang_vel_z'] = msg.twist.twist.angular.z
+            pos = msg.pose.pose.position
+            ori = msg.pose.pose.orientation
+            twist = msg.twist.twist
+
+            roll, pitch, yaw = quaternion_to_euler(ori.x, ori.y, ori.z, ori.w)
+
+            data[time_sec]['pos_x'] = pos.x
+            data[time_sec]['pos_y'] = pos.y
+            data[time_sec]['pos_z'] = pos.z
+            data[time_sec]['yaw'] = yaw  # <<<<<<<<<<<<<<<<  replaced orient_w with yaw
+            data[time_sec]['vel_x'] = twist.linear.x
+            data[time_sec]['vel_y'] = twist.linear.y
+            data[time_sec]['yaw_rate'] = twist.angular.z
 
         elif topic == throttle_topic:
             data[time_sec]['throttle'] = msg.data
@@ -72,7 +105,7 @@ def read_rosbag_and_write_csv(bag_path, output_csv):
 
     # Write to CSV
     with open(output_csv, mode='w', newline='') as csv_file:
-        fieldnames = ['timestamp', 'pos_x', 'pos_y', 'pos_z', 'orient_w', 'vel_x', 'vel_y', 'ang_vel_z', 'throttle', 'steering']
+        fieldnames = ['timestamp', 'pos_x', 'pos_y', 'pos_z', 'yaw', 'vel_x', 'vel_y', 'yaw_rate', 'throttle', 'steering']
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
 
         writer.writeheader()
