@@ -8,8 +8,8 @@ To install and run this project locally, follow these steps:
 ### 1. Clone the repository
 First, clone the repository to your local machine:
 ```bash
-git clone https://github.com/giovannilucente/forward_dynamics_model.git
-cd forward_dynamics_model
+git clone https://github.com/giovannilucente/learnable_vehicle_dynamics_model.git
+cd learnable_vehicle_dynamics_model
 ```
 ### 2. Install the requirements
 Install all the required dependencies listed in the requirements.txt:
