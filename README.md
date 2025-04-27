@@ -1,6 +1,6 @@
 # Forward dynamics model learned from ROS2 rosbag file
-This repository contains the scripts to train a forward dynamics model from ROS2 rosbag driving datasets.
-In case you do not have a recorded rosbag file, this repository provides also a script to generate an artificial rosbag file of a vehicle trajectory.
+This repository contains scripts for training a forward dynamics model using ROS2 rosbag driving datasets. 
+In case a recorded rosbag file is unavailable, this repository also provides a script to generate an artificial rosbag file of a vehicle trajectory.
 
 ## Installation and Setup 
 To install and run this project locally, follow these steps:
@@ -18,8 +18,8 @@ pip install -r requirements.txt
 ```
 
 ### 3. Generate an artificial ROS2 rosbag
-Place the ROS2 rosbag file in the folder /rosbag.
-As an example, is possible to generate a ROS2 rosbag file by running:
+Place the ROS2 rosbag file in the /rosbag folder. 
+If a ROS2 rosbag file is not available, you can generate one by running:
 ```bash
 python3 generate_artificial_rosbag_file.py
 ```
@@ -37,8 +37,8 @@ Topic information: Topic: /vehicle/braking | Type: std_msgs/Float64 | Count: 300
                    Topic: /vehicle/throttle | Type: std_msgs/Float64 | Count: 30000 | Serialization Format: cdr
                    Topic: /vehicle/odometry | Type: nav_msgs/Odometry | Count: 30000 | Serialization Format: cdr
 ```
-The repository works if there are these type of messages inside the rosbag file.
-The generated trajectory is based on a realistic dynamic bicycle model, with front and rear slip angles, non linear lateral forces, longitudinal dynamics that considers also drag and rolling forces.
+The repository works if these types of messages are present inside the rosbag file. 
+The generated trajectory is based on a realistic dynamic bicycle model, incorporating front and rear slip angles, non-linear lateral forces, and longitudinal dynamics that also account for drag and rolling forces.
 
 ### 4. Extract a CSV from the ROS2 rosbag 
 To generate a corresponding CSV file run:
@@ -63,9 +63,9 @@ The model predicts the following outputs:
 ```bash
 ['d_pos_x', 'd_pos_y', 'd_yaw', 'next_vel_x', 'next_vel_y', 'next_yaw_rate']
 ```
-Where 'd_pos_x', 'd_pos_y', 'd_yaw' are respectively the x, y and yaw differences between two consecutive timesteps.
-The model is a three layers perceptron, with hidden layer dimension = 128 and ReLU activation function.
-The performance on the test dataset is:
+Where d_pos_x, d_pos_y, and d_yaw represent the x, y, and yaw differences between two consecutive timesteps, respectively.
+The model is a three-layer perceptron with a hidden layer dimension of 128 and a ReLU activation function.
+The performance on the test dataset is as follows:
 ```bash
 Test RMSE per output:
 d_pos_x: 0.0265 m
