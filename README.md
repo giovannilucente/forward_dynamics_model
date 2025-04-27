@@ -18,7 +18,7 @@ pip install -r requirements.txt
 ```
 
 ### 3. Generate an artificial ROS2 rosbag
-Place the ROS2 rosbag file in the /rosbag folder. 
+Place the ROS2 rosbag file in the `/rosbag` folder. 
 If a ROS2 rosbag file is not available, you can generate one by running:
 ```bash
 python3 generate_artificial_rosbag_file.py
@@ -63,7 +63,7 @@ The model predicts the following outputs:
 ```bash
 ['d_pos_x', 'd_pos_y', 'd_yaw', 'next_vel_x', 'next_vel_y', 'next_yaw_rate']
 ```
-Where d_pos_x, d_pos_y, and d_yaw represent the x, y, and yaw differences between two consecutive timesteps, respectively.
+Where `d_pos_x`, `d_pos_y`, and `d_yaw` represent the x, y, and yaw differences between two consecutive timesteps, respectively.
 The model is a three-layer perceptron with a hidden layer dimension of 128 and a ReLU activation function.
 The performance on the test dataset is as follows:
 ```bash
