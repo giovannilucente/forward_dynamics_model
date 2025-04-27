@@ -17,7 +17,7 @@ Install all the required dependencies listed in the requirements.txt:
 pip install -r requirements.txt
 ```
 
-### 3. Generate a ROS2 rosbag
+### 3. Generate an artificial ROS2 rosbag
 Place the ROS2 rosbag file in the folder /rosbag.
 As an example, is possible to generate a ROS2 rosbag file by running:
 ```bash
@@ -38,6 +38,7 @@ Topic information: Topic: /vehicle/braking | Type: std_msgs/Float64 | Count: 300
                    Topic: /vehicle/odometry | Type: nav_msgs/Odometry | Count: 30000 | Serialization Format: cdr
 ```
 The repository works if there are these type of messages inside the rosbag file.
+The generated trajectory is based on a realistic dynamic bicycle model, with front and rear slip angles, non linear lateral forces, longitudinal dynamics that considers also drag and rolling forces.
 
 ### 4. Extract a CSV from the ROS2 rosbag 
 To generate a corresponding CSV file run:
