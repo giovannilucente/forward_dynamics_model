@@ -4,7 +4,7 @@ import rclpy
 import math
 import numpy as np 
 import rosbag2_py
-import matplotlib.pyplot as plt  # <<<<<<<<<<<<<<<<
+import matplotlib.pyplot as plt  
 from rosidl_runtime_py.utilities import get_message
 import rclpy.serialization
 
