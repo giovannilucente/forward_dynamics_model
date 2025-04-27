@@ -1,4 +1,4 @@
-# Forward dynamics model learned from ROS2 rosbag file
+# Vehicle dynamics model learned from ROS2 rosbag file
 This repository contains scripts for training a forward dynamics model using ROS2 rosbag driving datasets. 
 In case a recorded rosbag file is unavailable, this repository also provides a script to generate an artificial rosbag file of a vehicle trajectory.
 
