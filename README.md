@@ -65,3 +65,13 @@ The model predicts the following outputs:
 ```
 Where 'd_pos_x', 'd_pos_y', 'd_yaw' are respectively the x, y and yaw differences between two consecutive timesteps.
 The model is a three layers perceptron, with hidden layer dimension = 128 and ReLU activation function.
+The performance on the test dataset is:
+```bash
+Test RMSE per output:
+d_pos_x: 0.0265 m
+d_pos_y: 0.0283 m
+d_yaw:   0.0737 rad
+vel_x:   0.1090 m/s
+vel_y:   0.0488 m/s
+yaw_rate:0.0688 rad/s
+```
