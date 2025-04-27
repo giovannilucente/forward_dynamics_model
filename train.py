@@ -12,8 +12,16 @@ csv_file = 'trajectory_csv/trajectory_data.csv'
 df = pd.read_csv(csv_file)
 df = df.dropna()
 
+# Calculate dt: Time step between consecutive samples
+timestamps = df['timestamp'].values
+dt = np.diff(timestamps)  # Time difference between consecutive timestamps
+
+# Ensure dt has the same shape as inputs
+dt = np.concatenate(([0], dt))  # Add a zero at the beginning to match the shape
+
 # Prepare Inputs (NOW INCLUDING braking)
 inputs = df[['vel_x', 'vel_y', 'yaw', 'yaw_rate', 'steering', 'throttle', 'braking']].values[:-1]
+inputs = np.hstack([inputs, dt[:-1].reshape(-1, 1)])  # Add dt as the last column
 
 # Prepare Outputs
 d_pos_x = df['pos_x'].values[1:] - df['pos_x'].values[:-1]

@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 
 class DynamicsModel(nn.Module):
-    def __init__(self, input_dim=7, output_dim=6, hidden_dim=128):
+    def __init__(self, input_dim=8, output_dim=6, hidden_dim=128):
         """
-        input_dim: 7 (vel_x, vel_y, yaw, yaw_rate, steering, throttle, braking)
+        input_dim: 8 (vel_x, vel_y, yaw, yaw_rate, steering, throttle, braking, dt)
         output_dim: 6 (d_pos_x, d_pos_y, d_yaw, next_vel_x, next_vel_y, next_yaw_rate)
         hidden_dim: Number of neurons in the hidden layers
         """
@@ -25,6 +25,7 @@ class DynamicsModel(nn.Module):
         - x[:, 4] = steering
         - x[:, 5] = throttle
         - x[:, 6] = braking
+        - x[:, 7] = dt
         """
         x = self.relu(self.fc1(x))
         x = self.relu(self.fc2(x))

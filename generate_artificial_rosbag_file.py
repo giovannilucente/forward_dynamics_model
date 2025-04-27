@@ -26,33 +26,59 @@ def euler_to_quaternion(roll, pitch, yaw):
 
     return qx, qy, qz, qw
 
+def pacejka_force(alpha, B, C, D, E):
+    """
+    Calculate the lateral force using Pacejka's Magic Formula
+    :param alpha: Slip angle in radians
+    :param B, C, D, E: Pacejka parameters for the tire
+    :return: Lateral force
+    """
+    return D * math.sin(C * math.atan(B * alpha - E * (B * alpha - math.atan(B * alpha))))
+
+
 def generate_trajectory_and_control(num_points=500, dt=0.1):
     # Vehicle parameters
     mass = 1500.0  # kg
-    L = 2.5  # Wheelbase [m]
-    Lr = L / 2.0  # Rear axle to COG [m]
+    L = 2.5
+    Lr = L / 2.0
+    Lf = L - Lr
     drag_coeff = 0.3
     frontal_area = 2.2
     air_density = 1.225
     rolling_resistance_coeff = 0.015
-    max_engine_force = 4000.0  # N
-    max_brake_force = 6000.0   # N
+    max_engine_force = 4000.0
+    max_brake_force = 6000.0
     g = 9.81
-    v_max = 16.66  # 60 km/h ~ 16.66 m/s
-    max_steer = 0.4  # ~23 degrees
-    tau = 0.5 
+    v_max = 16.66
+    max_steer = 0.4
+    tau = 0.5
+    Iz = 2250.0
 
-    # Initialize states
+    Cf = 8000.0
+    Cr = 10000.0
+
+    # Example Pacejka parameters (for illustrative purposes)
+    B_f = 10  # Stiffness factor for front tire
+    C_f = 1.9  # Shape factor for front tire
+    D_f = 1500  # Peak lateral force for front tire
+    E_f = 0.97  # Curvature factor for front tire
+
+    B_r = 12  # Stiffness factor for rear tire
+    C_r = 2.0  # Shape factor for rear tire
+    D_r = 1600  # Peak lateral force for rear tire
+    E_r = 0.98  # Curvature factor for rear tire
+
     x = 0.0
     y = 0.0
     yaw = 0.0
     v = 0.0
     yaw_rate = 0.0
+    beta = 0.0
 
     odometries = []
     throttles = []
     steering_angles = []
-    brakes = []  # new list for brake messages
+    brakes = []
 
     # Noise parameters
     pos_noise_std = 0.01  
@@ -74,7 +100,7 @@ def generate_trajectory_and_control(num_points=500, dt=0.1):
 
         # Smooth steering (simulate more frequent and sharp turns)
         steering_val = np.clip(0.15 * math.sin(0.03 * i) + 0.1 * np.random.randn(), -max_steer, max_steer)
-
+        
         # -------- Vehicle longitudinal dynamics --------
         engine_force = throttle_val * max_engine_force
         brake_force = brake_val * max_brake_force
@@ -89,9 +115,26 @@ def generate_trajectory_and_control(num_points=500, dt=0.1):
         v = min(v, v_max)  # Cap the speed to 40 km/h
 
         # -------- Vehicle lateral/slip dynamics --------
-        beta = math.atan2(Lr * math.tan(steering_val), L)
-        desired_yaw_rate = (v / L) * math.tan(steering_val)
-        yaw_rate += (desired_yaw_rate - yaw_rate) * dt / tau
+        if v > 1.0:
+            alpha_f = steering_val - math.atan2((yaw_rate * Lf + v * math.sin(beta)), (v * math.cos(beta) + 1e-6))
+            alpha_r = -math.atan2((yaw_rate * Lr - v * math.sin(beta)), (v * math.cos(beta) + 1e-6))
+
+            Fyf = - pacejka_force(alpha_f, B_f, C_f, D_f, E_f)
+            Fyr = - pacejka_force(alpha_r, B_r, C_r, D_r, E_r)
+
+            yaw_acc = (Lf * Fyf - Lr * Fyr) / Iz
+            yaw_rate += yaw_acc * dt
+
+            lat_acceleration = (Fyf + Fyr) / mass
+            v_lat = lat_acceleration * dt
+
+            beta = math.atan2(v_lat, v + 1e-6)
+            
+        else:
+            yaw_acc = 0.0
+            yaw_rate *= 0.95  # Damp yaw_rate slowly
+            beta = steering_val * Lr / L
+        
 
         # -------- Update position --------
         x += v * math.cos(yaw + beta) * dt
