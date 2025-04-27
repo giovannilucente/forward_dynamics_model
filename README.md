@@ -63,3 +63,4 @@ The model predicts the following outputs:
 ['d_pos_x', 'd_pos_y', 'd_yaw', 'next_vel_x', 'next_vel_y', 'next_yaw_rate']
 ```
 Where 'd_pos_x', 'd_pos_y', 'd_yaw' are respectively the x, y and yaw differences between two consecutive timesteps.
+The model is a three layers perceptron, with hidden layer of dimension 128 neurons and ReLU activation function.
