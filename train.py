@@ -114,3 +114,80 @@ print(f"yaw_rate:{rmse[5]:.4f} rad/s")
 
 mean_rmse = np.mean(rmse)
 print(f"\nMean RMSE across all outputs: {mean_rmse:.4f}")
+
+# --- Bicycle Model Evaluation (Baseline) ---
+print("\n--- Bicycle Model Baseline Evaluation ---")
+
+L = 2.5  # Wheelbase in meters
+
+# Use test set from original dataframe to get inputs
+test_inputs_np = X_test.numpy()
+test_targets_np = y_test.numpy()
+
+# Bicycle model predictions
+pred_d_pos_x = []
+pred_d_pos_y = []
+pred_d_yaw = []
+pred_next_vel_x = []
+pred_next_vel_y = []
+pred_next_yaw_rate = []
+
+for i in range(test_inputs_np.shape[0]):
+    vel_x, vel_y, yaw, yaw_rate, steering, throttle, braking, dt = test_inputs_np[i]
+    v = np.sqrt(vel_x**2 + vel_y**2)
+    a = throttle - braking
+    delta = steering
+
+    next_v = v + a * dt
+    next_yaw = yaw + (v / L) * delta * dt
+    next_vx = next_v * np.cos(next_yaw)
+    next_vy = next_v * np.sin(next_yaw)
+
+    dx = v * np.cos(yaw) * dt
+    dy = v * np.sin(yaw) * dt
+    dyaw = (v / L) * delta * dt
+    next_yawrate = (v / L) * delta
+
+    pred_d_pos_x.append(dx)
+    pred_d_pos_y.append(dy)
+    pred_d_yaw.append(((dyaw + np.pi) % (2 * np.pi)) - np.pi)  # Wrap
+    pred_next_vel_x.append(next_vx)
+    pred_next_vel_y.append(next_vy)
+    pred_next_yaw_rate.append(next_yawrate)
+
+# Stack predictions
+baseline_preds = np.stack([
+    pred_d_pos_x,
+    pred_d_pos_y,
+    pred_d_yaw,
+    pred_next_vel_x,
+    pred_next_vel_y,
+    pred_next_yaw_rate
+], axis=1)
+
+# Compute RMSE
+rmse_baseline = np.sqrt(np.mean((baseline_preds - test_targets_np) ** 2, axis=0))
+
+# Print results
+print("\nBicycle Model RMSE per output:")
+print(f"d_pos_x: {rmse_baseline[0]:.4f} m")
+print(f"d_pos_y: {rmse_baseline[1]:.4f} m")
+print(f"d_yaw:   {rmse_baseline[2]:.4f} rad")
+print(f"vel_x:   {rmse_baseline[3]:.4f} m/s")
+print(f"vel_y:   {rmse_baseline[4]:.4f} m/s")
+print(f"yaw_rate:{rmse_baseline[5]:.4f} rad/s")
+
+mean_rmse_baseline = np.mean(rmse_baseline)
+print(f"\nMean RMSE across all outputs (Bicycle Model): {mean_rmse_baseline:.4f}")
+
+# Load trained weights
+model = DynamicsModel()
+model.load_state_dict(torch.load("trained_dynamics_model.pth"))
+model.eval()
+
+# Convert to TorchScript
+example_input = torch.randn(1, 8)  # (vel_x, vel_y, yaw, yaw_rate, steering, throttle, braking, dt)
+traced_script_module = torch.jit.trace(model, example_input)
+
+# Save it
+traced_script_module.save("trained_dynamics_model_script.pt")

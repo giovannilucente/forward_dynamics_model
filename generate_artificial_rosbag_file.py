@@ -49,7 +49,7 @@ def generate_trajectory_and_control(num_points=500, dt=0.1):
     max_engine_force = 4000.0
     max_brake_force = 6000.0
     g = 9.81
-    v_max = 16.66
+    v_max = 20
     max_steer = 0.4
     tau = 0.5
     Iz = 2250.0
